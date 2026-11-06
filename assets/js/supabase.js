@@ -150,10 +150,18 @@
     try {
       var res = await sb.from("drives").select("*").order("drive_date", { ascending: true });
       if (res.error || !res.data || !res.data.length) return;
+      // Dedupe by title (defensive: the seed data was run twice in the
+      // SQL Editor once, creating duplicate drive rows 11-20).
+      var seen = {};
+      var rows = res.data.filter(function (d) {
+        if (seen[d.title]) return false;
+        seen[d.title] = true;
+        return true;
+      });
       // Keep the original photos (matched by title); use DB for everything else.
       var byTitle = {};
       (window.DRIVES || []).forEach(function (d) { byTitle[d.title] = d.img; });
-      var mapped = res.data.map(function (d) {
+      var mapped = rows.map(function (d) {
         return {
           id: d.id,
           title: d.title,
