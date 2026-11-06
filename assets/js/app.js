@@ -49,9 +49,11 @@ function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;")}
 (function(){var months=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];var scores=[38,40,30,28,32,88,96,90,74,58,46,42];var h="";months.forEach(function(m,i){h+='<div class="tl'+(scores[i]>=85?" best":"")+'">'+m+"<small>"+scores[i]+"/100</small></div>"});document.getElementById("monsoonTl").innerHTML=h})();
 
 function survivalPct(){if(!trees.length)return 0;var ok=trees.filter(function(t){return t.health!=="Lost"}).length;return Math.round(ok/trees.length*100)}
+function treeQty(t){return t.qty||1;}
+function totalTrees(){return trees.reduce(function(s,t){return s+treeQty(t)},0);}
 function renderDashboard(){
- countUp(document.getElementById("statTrees"),trees.length);
- if(trees.length)countUp(document.getElementById("statSurvival"),Math.round(trees.filter(function(t){return t.health==="Healthy"}).length/trees.length*100),"%");else document.getElementById("statSurvival").textContent="—";
+ countUp(document.getElementById("statTrees"),totalTrees());
+ if(trees.length)countUp(document.getElementById("statSurvival"),Math.round(trees.filter(function(t){return t.health==="Healthy"}).reduce(function(s,t){return s+treeQty(t)},0)/totalTrees()*100),"%");else document.getElementById("statSurvival").textContent="—";
  var need=trees.filter(function(t){return parseInt(t.watered)>=4||t.health!=="Healthy"}).length;
  countUp(document.getElementById("statWater"),need);
  var due=trees.slice().sort(function(a,b){return parseInt(b.watered)-parseInt(a.watered)}).slice(0,3);
@@ -60,7 +62,7 @@ function renderDashboard(){
 }
 function healthTag(h){return h==="Healthy"?'<span class="tag">● Healthy</span>':h==="Stressed"?'<span class="tag amber">● Stressed</span>':'<span class="tag red">● '+h+"</span>"}
 function treeCardHTML(t){var sp=SPECIES.filter(function(s){return s.name===t.species})[0]||{icon:"🌳"};
- return '<div class="card"><div class="tree-card"><div class="avatar">'+sp.icon+'</div><div style="flex:1;min-width:0"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><b>'+t.species+"</b>"+healthTag(t.health)+'</div><p style="margin-top:4px">📍 '+esc(t.loc)+'<br/>Planted '+t.planted+" · 💧 "+t.waters+" waterings · last "+t.watered+'</p></div></div></div>'}
+ return '<div class="card"><div class="tree-card"><div class="avatar">'+sp.icon+'</div><div style="flex:1;min-width:0"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><b>'+t.species+"</b>"+healthTag(t.health)+'</div><p style="margin-top:4px">📍 '+esc(t.loc)+'<br/>Planted '+t.planted+(treeQty(t)>1?" · ×"+treeQty(t)+" trees":"")+" · 💧 "+t.waters+" waterings · last "+t.watered+'</p></div></div></div>'}
 
 /* Journey selector */
 var HINTS={community:"For community drives, maintenance and water matter as much as species.",species:"We'll score your chosen species honestly — a poor fit gets flagged, with a better companion mix suggested, never a silent swap.",date:"Your date is fixed, so the engine focuses on prep work, pit preparation and an irrigation bridge until roots establish.",location:"Your site is fixed, so species and soil treatment adapt to it — not the other way round.",individual:"A few trees, cared for well, beat hundreds planted and forgotten. Small plans get the same rigour."};
@@ -106,7 +108,8 @@ function runEngine(){
  var rows=[["🗓️ Timing ("+monthName+")",tScore],["🪨 Soil–species fit ("+SOILNAMES[soil]+")",soilScore],["💧 Water ("+document.getElementById("fWater").selectedOptions[0].text+")",wScore],["🛡️ Maintenance plan",cScore],["🌫️ Air quality context (AQI "+D.aqi+")",Math.round(aqiScore)]];
  var color=overall>=80?"var(--green)":overall>=55?"var(--amber)":"var(--red)";
  var verdict=overall>=80?"Strong plan — plant with confidence":overall>=55?"Workable plan — fix the warnings below":"Risky plan — change date, water or care first";
- var mixHTML=mix.map(function(m){var n=Math.max(1,Math.round(count*m.pct/100));return '<div class="mixrow"><div class="nm">'+m.sp.icon+" "+m.sp.name+'</div><div class="bar" style="flex:1"><i style="width:'+m.pct+'%"></i></div><b>'+m.pct+"%</b><span class='mini'>≈ "+n.toLocaleString("en-IN")+" trees · fit "+fit(m.sp)+"/100</span></div>"}).join("");
+ var _mix=mix.map(function(m){return{species:m.sp.name,n:Math.max(1,Math.round(count*m.pct/100))}}); var _sum=_mix.reduce(function(s,m){return s+m.n},0); _mix[_mix.length-1].n=Math.max(1,_mix[_mix.length-1].n+(count-_sum));
+ var mixHTML=mix.map(function(m,i){var n=_mix[i].n;return '<div class="mixrow"><div class="nm">'+m.sp.icon+" "+m.sp.name+'</div><div class="bar" style="flex:1"><i style="width:'+m.pct+'%"></i></div><b>'+m.pct+"%</b><span class='mini'>≈ "+n.toLocaleString("en-IN")+" trees · fit "+fit(m.sp)+"/100</span></div>"}).join("");
  var html='<div class="card"><div class="dial-wrap"><div style="text-align:center"><div style="font-size:52px;font-weight:900;letter-spacing:-.03em;color:'+color+';line-height:1">'+overall+'<span style="font-size:22px;color:var(--muted)">/100</span></div><div class="stat-lab">Suitability score</div></div><div style="flex:1;min-width:200px"><h3 style="font-size:19px">'+verdict+'</h3><p>'+district+" · "+D.climate+' · '+count.toLocaleString("en-IN")+" trees · for "+purpose.toLowerCase()+'</p><div style="margin-top:8px"><span class="tag">🌱 Expected survival: <b>'+survival+'%</b></span> <span class="tag">💧 First-90-day water: ≈ '+totalWater+' L</span></div></div></div>'
  +rows.map(function(r){return '<div class="score-row"><span>'+r[0]+'</span><span style="display:flex;align-items:center;gap:8px"><span class="bar" style="width:90px"><i style="width:'+r[1]+'%"></i></span><b>'+r[1]+'</b></span></div>'}).join("")
  +'<h3 style="margin-top:16px">Recommended species mix</h3>'+mixHTML
@@ -114,15 +117,15 @@ function runEngine(){
  +'<h3 style="margin-top:14px">Your first 90 days</h3><p style="text-align:left">1) Dig &amp; compost pits 7 days before planting. 2) Plant early morning; water '+litresPerTree+' L per sapling on day one. 3) Mulch a 1 m ring and fit guards. 4) Water on the schedule above, log it in the Tracker, and do a health check at day 30.</p>'
  +'<button class="btn btn-dark" style="width:100%;margin-top:12px" onclick="savePlanToTracker()">Save this plan to My Trees</button><p class="mini" style="text-align:center;margin-top:8px">Saving creates tracked trees for each species in the mix, shown on your Dashboard and in My Trees.</p></div>';
  document.getElementById("planResult").innerHTML=html;
- lastPlan={district:district,count:count,mix:mix.map(function(m){return{species:m.sp.name,n:Math.max(1,Math.round(count*m.pct/100))}}),date:monthName};
+ lastPlan={district:district,count:count,mix:_mix,date:monthName};
  document.getElementById("planResult").scrollIntoView({behavior:"smooth",block:"start"});
 }
-function savePlanToTracker(){if(!lastPlan)return; lastPlan.mix.forEach(function(m){trees.push({id:nextId++,species:m.species,loc:lastPlan.district+" — planned drive site",planted:lastPlan.date,health:"Healthy",watered:"0 days ago",waters:0})}); toast("✅ Plan saved — "+lastPlan.count+" trees added to your tracker"); leafBurst(); renderDashboard(); go("tracker");}
+function savePlanToTracker(){if(!lastPlan)return; var added=0; lastPlan.mix.forEach(function(m){var k=Math.max(1,m.n||1); added+=k; trees.push({id:nextId++,species:m.species,qty:k,loc:lastPlan.district+" — planned drive site",planted:lastPlan.date,health:"Healthy",watered:"0 days ago",waters:0})}); toast("✅ Plan saved — "+added+" trees added to your tracker"); leafBurst(); renderDashboard(); go("tracker");}
 
 /* ===== Tracker ===== */
 function renderTracker(){
- var healthy=trees.filter(function(t){return t.health==="Healthy"}).length;
- document.getElementById("trackerStats").innerHTML='<div class="card"><div class="stat-num">'+trees.length+'</div><div class="stat-lab">Total tracked</div></div><div class="card"><div class="stat-num">'+healthy+'</div><div class="stat-lab">Healthy</div></div><div class="card"><div class="stat-num">'+(trees.length-healthy)+'</div><div class="stat-lab">Stressed / need care</div></div>';
+ var _total=totalTrees(); var healthy=trees.filter(function(t){return t.health==="Healthy"}).reduce(function(s,t){return s+treeQty(t)},0);
+ document.getElementById("trackerStats").innerHTML='<div class="card"><div class="stat-num">'+_total+'</div><div class="stat-lab">Total tracked</div></div><div class="card"><div class="stat-num">'+healthy+'</div><div class="stat-lab">Healthy</div></div><div class="card"><div class="stat-num">'+(_total-healthy)+'</div><div class="stat-lab">Stressed / need care</div></div>';
  document.getElementById("treeList").innerHTML=trees.map(function(t){return treeCardHTML(t)+''}).join("")===""?'<div class="card"><p>No trees yet.</p></div>':trees.map(function(t,i){
   return '<div class="card">'+treeCardHTML(t).replace('<div class="card">','').replace(/<\/div>$/,'')+'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px"><button class="hbtn" onclick="logWater('+i+')">💧 Log watering</button>'+["Healthy","Stressed","Needs attention"].map(function(h){return '<button class="hbtn'+(t.health===h?" on":"")+'" onclick="setHealth('+i+',\''+h+'\')">'+h+"</button>"}).join("")+"</div></div>"}).join("");
 }
