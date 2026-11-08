@@ -50,7 +50,7 @@ function survivalPct(){if(!trees.length)return 0;var ok=trees.filter(function(t)
 function treeQty(t){return t.qty||1;}
 function totalTrees(){return trees.reduce(function(s,t){return s+treeQty(t)},0);}
 function renderDashboard(){
- var _hd=document.getElementById("heroDrives");if(_hd)_hd.textContent=DRIVES.length+" upcoming drive"+(DRIVES.length===1?"":"s");
+ var _hd=document.getElementById("heroDrives");if(_hd)_hd.textContent=DRIVES.length+" upcoming drive"+(DRIVES.length===1?"":"s");var _sd=document.getElementById("statDrives");if(_sd)_sd.textContent=DRIVES.length;
  countUp(document.getElementById("statTrees"),totalTrees());
  if(trees.length)countUp(document.getElementById("statSurvival"),Math.round(trees.filter(function(t){return t.health==="Healthy"}).reduce(function(s,t){return s+treeQty(t)},0)/totalTrees()*100),"%");else document.getElementById("statSurvival").textContent="—";
  var need=trees.filter(function(t){return parseInt(t.watered)>=4||t.health!=="Healthy"}).length;
