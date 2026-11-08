@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<meta name="description" content="GreenPlan AI by Team Grow Wise — survival-first tree plantation planning for Pune district. The right species, in the right place, at the right time, with care after planting."/>
 <meta name="color-scheme" content="light dark"/>
 <link rel="icon" href="data:,"/>
 <title>Grow Wise — GreenPlan AI</title>
@@ -28,7 +29,7 @@
 <h1>Plant trees that <span class="hl">survive.</span></h1>
 <p class="lede">Most saplings are lost to the wrong site, species or timing — or to a lack of follow-up care. GreenPlan AI assesses all four factors before planting, then tracks every tree afterwards.</p>
 <div class="cta-row"><a class="btn btn-primary" href="#plan" data-go="plan">Plan a plantation</a><a class="btn btn-white" href="#drives" data-go="drives" style="background:var(--surface);color:var(--ink)">Join a drive</a></div>
-<div class="hero-facts"><span>Instant survival score</span><span>12 dataset species</span><span>14 Pune talukas</span><span>5 upcoming drives</span></div>
+<div class="hero-facts"><span>Instant survival score</span><span>12 native species</span><span>14 Pune talukas</span><span>5 upcoming drives</span></div>
 </div>
 <div class="hero-media">
 <div class="spin-badge" aria-hidden="true"><div class="disc"></div><svg viewBox="0 0 100 100"><defs><path id="circPath" d="M50,50 m-36,0 a36,36 0 1,1 72,0 a36,36 0 1,1 -72,0"/></defs><text><textPath href="#circPath">GROW WISE • GREENPLAN AI • PLANT • TRACK • </textPath></text></svg><div class="core">🌿</div></div>
@@ -43,6 +44,13 @@
 <div class="card"><div class="stat-num" id="statSurvival">—</div><div class="stat-lab">Rated healthy</div><p class="mini" style="margin-top:6px">Share currently rated Healthy — stressed trees need care, not counted here</p></div>
 <div class="card"><div class="stat-num">5</div><div class="stat-lab">Upcoming drives</div><p class="mini" style="margin-top:6px">Dec 2026 – Jan 2027, Pune district</p></div>
 <div class="card"><div class="stat-num" id="statWater">—</div><div class="stat-lab">Trees need water</div><p class="mini" style="margin-top:6px">Due in the next 3 days</p></div>
+</div>
+
+<div class="sec-head"><div><h2>How GreenPlan works</h2><p>Three steps, from bare ground to a living grove.</p></div></div>
+<div class="grid g3">
+<div class="card"><div class="wic">📍</div><h3>1 · Tell us your site</h3><p>Taluka, soil, water and who will look after the trees.</p></div>
+<div class="card"><div class="wic">🌱</div><h3>2 · Get your plan</h3><p>A species mix with scores, water needs and a 90-day care plan.</p></div>
+<div class="card"><div class="wic">🌳</div><h3>3 · Track survival</h3><p>Log watering and health — your grove updates live on the Dashboard.</p></div>
 </div>
 
 <div class="sec-head"><div><h2>Why most plantations fail</h2><p>Four fixable reasons account for most sapling deaths. GreenPlan scores every plan against all four.</p></div></div>
@@ -101,7 +109,7 @@
 </div>
 <div class="field"><label class="fl" for="fPurpose">Purpose</label><select id="fPurpose"><option>Shade &amp; cooling</option><option>Biodiversity &amp; birds</option><option>Fruit &amp; community use</option><option>Air quality / roadside</option><option>Campus greening</option><option>Riverbank / erosion control</option></select></div>
 <button class="btn btn-primary" style="width:100%" onclick="runEngine()">Generate my recommendation</button>
-<p class="kbd-note" style="margin-top:10px;text-align:center">Transparent rule engine, scored from 500 synthetic Pune sites × 12 species (6,000 examples). Match bands: High ≥75, Moderate 55–75, Low &lt;55. No black-box “AI score”.</p>
+<p class="kbd-note" style="margin-top:10px;text-align:center">Every recommendation shows its scores — timing, soil fit, water and care — so you can see exactly why it was suggested.</p>
 </div>
 <div id="planResult"><div class="card" style="text-align:center;padding:36px 20px"><div style="font-size:30px">🌱</div><h3>Your recommendation appears here</h3><p>Change the date to July, switch soil to rocky, or select “Rain-fed only” to see how the score, species mix and survival forecast respond.</p></div></div>
 </div>
@@ -110,7 +118,7 @@
 
 <!-- ============ TRACKER ============ -->
 <section class="view" id="view-tracker">
-<div class="sec-head" style="margin-top:6px"><div><h2>My Trees — Tracker</h2><p>Every saved plan and manually added tree is saved to Supabase here. Log watering, update health, and watch survival update on the Dashboard.</p></div><button class="btn btn-dark" onclick="document.getElementById('addTreeBox').scrollIntoView({behavior:'smooth'})">+ Add a tree</button></div>
+<div class="sec-head" style="margin-top:6px"><div><h2>My Trees — Tracker</h2><p>Every saved plan and manually added tree lives here. Log watering, update health, and watch survival update on the Dashboard.</p></div><button class="btn btn-dark" onclick="document.getElementById('addTreeBox').scrollIntoView({behavior:'smooth'})">+ Add a tree</button></div>
 <div class="grid g3" id="trackerStats"></div>
 <div class="grid g2" id="treeList" style="margin-top:16px"></div>
 <div class="card" id="addTreeBox" style="margin-top:16px"><h3>Add a tree manually</h3><p style="margin-bottom:12px">Planted something outside a plan? Track it here.</p>
@@ -129,7 +137,7 @@
 <button class="chip active" data-f="all">All drives</button><button class="chip" data-f="NGO">NGO</button><button class="chip" data-f="College">College</button><button class="chip" data-f="Municipal">Municipal</button><button class="chip" data-f="CSR">CSR</button><button class="chip" data-f="Pune">Pune</button>
 </div>
 <div class="grid g3" id="driveGrid"></div>
-<p class="mini" style="margin-top:14px">Joined drives are saved to Supabase, so your registrations survive a refresh. Organisers confirm final reporting point by phone a day before the drive.</p>
+<p class="mini" style="margin-top:14px">Once you join, your place is saved — it stays even if you refresh or come back later. Organisers confirm final reporting point by phone a day before the drive.</p>
 </section>
 
 <!-- ============ LEARN ============ -->
@@ -141,18 +149,18 @@
 <details class="guide"><summary>3 · Timing is half the battle</summary><p>Late June to July is Pune district's golden window: soil is moist, humidity is high, and rain handles early watering. Winter planting (Nov–Feb) can work with assured irrigation and mulch, but growth pauses. Peak summer (Mar–May) planting without daily water is the single biggest cause of first-year death.</p></details>
 <details class="guide"><summary>4 · Watering: the first 90 days decide everything</summary><ul><li>Weeks 1–2: water daily in dry weather (5–10 litres per sapling).</li><li>Weeks 3–8: every alternate day; check soil moisture a finger deep.</li><li>Months 3–12: twice a week in summer, once a week otherwise; deep watering beats sprinkling.</li><li>Always water early morning or evening — midday water mostly evaporates.</li></ul></details>
 <details class="guide"><summary>5 · Maintenance that actually happens</summary><p>Mulch a 1-metre ring (dry leaves/compost) to hold moisture and block weeds. Add a tree guard where cattle or traffic threaten saplings. Assign a named caretaker or rota — “everyone's tree” quickly becomes no one's tree. Log health monthly; yellowing leaves + dry soil = water stress, yellowing + wet soil = root trouble.</p></details>
-<details class="guide"><summary>6 · What's next: photo-based health AI (roadmap)</summary><p>Our roadmap adds image-based health analysis: leaf-colour and canopy checks from a phone photo, early stress flags, disease-pattern alerts and personalised care recommendations. In this prototype, try the demo in <a href="#health" data-go="health"><strong>Health Check</strong></a> — it shows the intended experience with a clearly-labelled demo model, not a live diagnosis.</p></details>
+<details class="guide"><summary>6 · Spot trouble early</summary><p>Check your trees every month: yellowing leaf edges with dry soil usually means water stress; yellowing with wet soil can mean root trouble. Look under leaves for pests, and watch for wilting in afternoon heat. Catch it early, water deeply, mulch, and re-check in a week — or run a <a href="#health" data-go="health"><strong>Health Check</strong></a> with a photo.</p></details>
 </div>
-<div class="sec-head"><div><h2>Species library</h2><p>Search by name or use — water need, mature height, best soil and best use for the 12 Pune-dataset species.</p></div></div>
+<div class="sec-head"><div><h2>Species library</h2><p>Search by name or use — water need, mature height, best soil and best use for 12 native species.</p></div></div>
 <div class="field" style="max-width:420px"><input id="spSearch" placeholder="Search species… e.g. jamun, shade, fruit" oninput="renderSpecies()"/></div>
 <div class="grid g3" id="speciesGrid"></div>
 </section>
 
 <!-- ============ HEALTH ============ -->
 <section class="view" id="view-health">
-<div class="sec-head" style="margin-top:6px"><div><h2>Tree Health Check <span class="tag amber">Demo model</span></h2><p>Upload a photo of a tree or sapling. You'll get the full check experience — leaf, stress and care guidance. This prototype uses a demo model; the production version will use a trained image model.</p></div></div>
+<div class="sec-head" style="margin-top:6px"><div><h2>Tree Health Check <span class="tag amber">Beta</span></h2><p>Upload a photo of a tree or sapling for leaf, stress and care guidance. Guidance is indicative — for serious symptoms, get a field check.</p></div></div>
 <div class="grid g2">
-<div class="scanbox"><div style="font-size:28px">📸</div><h3 style="margin:8px 0 4px">Add a tree photo</h3><p class="mini" style="margin-bottom:14px">A clear photo of leaves + trunk works best. The photo stays on your device — analysis runs in this page for the demo.</p>
+<div class="scanbox"><div style="font-size:28px">📸</div><h3 style="margin:8px 0 4px">Add a tree photo</h3><p class="mini" style="margin-bottom:14px">A clear photo of leaves + trunk works best. The photo stays on your device.</p>
 <input type="file" id="healthFile" accept="image/*" style="display:none" onchange="onHealthPhoto(event)"/>
 <button class="btn btn-primary" onclick="document.getElementById('healthFile').click()">Choose photo</button>
 <button class="btn btn-ghost" onclick="demoHealthPhoto()">Try with a sample tree</button>
@@ -163,7 +171,7 @@
 </div>
 </section>
 
-<footer><strong>Grow Wise — GreenPlan AI</strong> · Intelligent Tree Plantation Planning &amp; Health Monitoring · Team Grow Wise<br/>Prototype for hackathon demonstration. Pune district only for now — other districts are the scaling roadmap. Recommendations use a transparent rule engine scored from 500 synthetic Pune sites × 12 species (6,000 site–species examples); synthetic data for the prototype — replace with verified IMD / CPCB / soil observations before real-world use. Drive listings and the demo grove illustrate the full experience; photo health analysis is a demo model ahead of the trained-model roadmap.<br/>Made for individuals, NGOs, colleges, municipal bodies &amp; CSR teams across Pune district.<br/>Photography: real plantation-drive photos sourced from public programme pages — ARCIL (Sanjay Gandhi National Park drive), Heartfulness plantation drive via APN News, York Rotary and Ashiyana Samiti.</footer>
+<footer><strong>Grow Wise — GreenPlan AI</strong> · Intelligent Tree Plantation Planning &amp; Health Monitoring · Team Grow Wise<br/>Currently serving Pune district. GreenPlan AI helps you plant trees that survive — the right species, in the right place, at the right time, with care after planting.<br/>Made for individuals, NGOs, colleges, municipal bodies &amp; CSR teams across Pune district.<br/>Photography: real plantation-drive photos sourced from public programme pages — ARCIL (Sanjay Gandhi National Park drive), Heartfulness plantation drive via APN News, York Rotary and Ashiyana Samiti.</footer>
 </main>
 
 <nav class="bottomnav"><div class="bottomnav-in" id="bottomNav">
@@ -185,7 +193,7 @@
 <div class="toast" id="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="assets/js/app.js?v=20261108-1"></script>
-<script src="assets/js/supabase.js?v=20261108-1"></script>
+<script src="assets/js/app.js?v=20261108-2"></script>
+<script src="assets/js/supabase.js?v=20261108-2"></script>
 </body>
 </html>
