@@ -24,18 +24,9 @@
   var mode = "local"; // "supabase" | "local"
 
   function setStatus(text) {
-    try {
-      var el = document.getElementById("gwBackendStatus");
-      if (!el) {
-        el = document.createElement("p");
-        el.id = "gwBackendStatus";
-        el.className = "mini";
-        el.style.marginTop = "8px";
-        var footer = document.querySelector("footer");
-        if (footer) footer.appendChild(el);
-      }
-      el.textContent = text;
-    } catch (e) { /* status is cosmetic only */ }
+    // Never shown on screen: the site reads like a normal product,
+    // with nothing about the backend, database or sync state visible.
+    try { if (window.console && console.info) console.info("[GrowWise] " + text); } catch (e) { /* ignore */ }
   }
 
   /* ---------- localStorage backup ---------- */
@@ -324,14 +315,14 @@
     wrapActions();
 
     if (!window.supabase || !window.supabase.createClient) {
-      setStatus("Backend: local mode — your trees save in this browser. Supabase library did not load.");
+      setStatus("Library did not load — your trees save in this browser for now.");
       return;
     }
     try {
       sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
       window.GWSupabase = sb;
     } catch (e) {
-      setStatus("Backend: local mode — your trees save in this browser.");
+      setStatus("Your trees save in this browser for now.");
       return;
     }
 
@@ -349,12 +340,12 @@
       if (!user) throw new Error("no user");
       userId = user.id;
       mode = "supabase";
-      setStatus("Backend: Supabase connected — your trees, plans and drive joins save to the database and survive a refresh.");
+      setStatus("Connected — your trees, plans and drive joins are saved and survive a refresh.");
       sbLoadDrives();
       sbLoadTrees();
     }).catch(function () {
       mode = "local";
-      setStatus("Backend: local mode — your trees save in this browser. Turn on Anonymous sign-in in Supabase Auth to sync across devices.");
+      setStatus("Your trees save in this browser for now.");
       // Drives/species are still readable without sign-in.
       sbLoadDrives();
     });
