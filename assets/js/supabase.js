@@ -30,6 +30,29 @@
   }
 
   /* ---------- localStorage backup ---------- */
+  // The 12 Pune species. Anything else in a saved tracker copy (e.g. Mango,
+  // Rain Tree, Gulmohar, Tamarind from before the Pune-only update) is stale
+  // test data and is dropped when the backup is restored.
+  var KNOWN_SPECIES = ["Neem", "Karanj", "Bahava (Amaltas)", "Jamun", "Banyan", "Peepal",
+    "Amla", "Arjun", "Mahua", "Shirish", "Kachnar", "Dudhi"];
+  function isKnownSpecies(name) {
+    if (window.SPECIES && window.SPECIES.length) {
+      return window.SPECIES.some(function (s) { return s.name === name; });
+    }
+    return KNOWN_SPECIES.indexOf(name) >= 0;
+  }
+  // Drop stale species and collapse identical saves (same species, place,
+  // planted date and quantity) to one entry, keeping the first.
+  function cleanTrees(list) {
+    var seen = {};
+    return (list || []).filter(function (t) {
+      if (!t || !isKnownSpecies(t.species)) return false;
+      var key = [t.species, t.loc || "", t.planted || "", t.qty || 1].join("|");
+      if (seen[key]) return false;
+      seen[key] = true;
+      return true;
+    });
+  }
   function saveLocal() {
     try {
       localStorage.setItem(LS_KEY, JSON.stringify({
@@ -46,9 +69,18 @@
       if (!raw) return false;
       var data = JSON.parse(raw);
       if (data && Array.isArray(data.trees) && data.trees.length) {
-        window.trees = data.trees;
-        window.joinedDrives = data.joinedDrives || {};
+        // Clean stale test data out of the saved copy before using it.
+        var cleaned = cleanTrees(data.trees);
+        if (!cleaned.length) return false; // fall back to the fresh seed grove
+        window.trees = cleaned;
+        // Drop joins to drives that no longer exist (non-Pune drives).
+        var jd = data.joinedDrives || {};
+        var driveIds = {};
+        (window.DRIVES || []).forEach(function (d) { driveIds[d.id] = true; });
+        Object.keys(jd).forEach(function (k) { if (!driveIds[k]) delete jd[k]; });
+        window.joinedDrives = jd;
         if (data.nextId) window.nextId = data.nextId;
+        saveLocal(); // persist the cleaned copy
         return true;
       }
     } catch (e) { /* ignore corrupt backup */ }
@@ -189,6 +221,7 @@
       var res = await sb.from("trees").select("*").order("created_at", { ascending: true });
       if (res.error || !res.data || !res.data.length) return;
       res.data.forEach(function (row) {
+        if (!isKnownSpecies(row.species)) return; // stale pre-Pune species from test saves
         var exists = (window.trees || []).some(function (t) { return t._sbId === row.id; });
         if (exists) return;
         // Avoid duplicating the seed grove on first sync.
