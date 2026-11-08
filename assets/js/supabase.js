@@ -4,6 +4,8 @@
    ------------------------------------------------------------
    - Supabase (PostgreSQL) is the system of record for plans,
      trees, watering logs, drive joins and health checks.
+   - Pune district only (Nov 2026): plans store the Pune taluka;
+     drives are filtered to Pune district.
    - localStorage is a backup on this device, so the demo never
      breaks if Supabase is offline or anonymous sign-in is off.
    - The publishable key below is public by design (Supabase
@@ -101,7 +103,7 @@
         soil: null,
         water_source: null,
         maintenance: null,
-        location_text: plan.district,
+        location_text: "Pune district — " + plan.district,
         species_requested: null,
         recommendation: plan.mix || [],
         suitability_score: null,
@@ -158,6 +160,14 @@
         seen[d.title] = true;
         return true;
       });
+      // Pune district only (Nov 2026): drop any non-Pune drive rows
+      // from the live DB, so the site stays Pune-only even before the
+      // database migration runs. If nothing survives the filter, keep
+      // the hardcoded Pune drives as fallback.
+      rows = rows.filter(function (d) {
+        return ((d.district || d.city || "").toLowerCase() === "pune");
+      });
+      if (!rows.length) return;
       // Keep the original photos (matched by title); use DB for everything else.
       var byTitle = {};
       (window.DRIVES || []).forEach(function (d) { byTitle[d.title] = d.img; });

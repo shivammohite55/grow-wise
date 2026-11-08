@@ -17,8 +17,8 @@ Backend: Supabase (PostgreSQL) for GreenPlan AI.
 2. Open `supabase/schema.sql` from this repo, copy the whole file, paste it in, press **Run**.
 3. It should finish with no errors. Verify:
    ```sql
-   select count(*) from public.species;  -- expect 10
-   select count(*) from public.drives;   -- expect 10
+   select count(*) from public.species;  -- expect 12
+   select count(*) from public.drives;   -- expect 5
    ```
 
 ## 3. Auth — turn on what the app needs
@@ -55,3 +55,7 @@ The anon key is designed to be public — it ends up in the frontend code anyway
 - Realtime joined counts on drives, and dashboard stats from the user's own rows.
 
 After wiring, the code is pushed to GitHub and GitHub Pages redeploys automatically.
+
+## Existing project? Run the Pune-only migration
+
+If the schema was already run once (the old 10-species / 10-drive version), do **not** re-run `schema.sql` — it would duplicate drives. Run `supabase/migrate_pune_only.sql` once in the SQL Editor instead: it drops the 5 non-Pune drives, drops Mango / Rain Tree / Gulmohar / Tamarind, and adds the 6 dataset species (Amla, Arjun, Mahua, Shirish, Kachnar, Dudhi). The site also filters drives to Pune in code, so it stays Pune-only even before the migration runs.

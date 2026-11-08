@@ -3,6 +3,8 @@
 -- Supabase / PostgreSQL schema
 -- Run this whole file once in Supabase: SQL Editor > New query
 -- Project: grow-wise  |  Database: Postgres
+-- Pune district only (Nov 2026): 12 dataset species, 5 Pune drives.
+-- Existing projects: run supabase/migrate_pune_only.sql instead of re-running this file.
 -- ============================================================
 
 -- UUIDs
@@ -37,6 +39,18 @@ create table if not exists public.species (
   note text,
   created_at timestamptz not null default now()
 );
+
+-- Dataset tolerance columns (from the Pune species reference file)
+alter table public.species add column if not exists ph_min numeric;
+alter table public.species add column if not exists ph_max numeric;
+alter table public.species add column if not exists rain_min_mm int;
+alter table public.species add column if not exists rain_max_mm int;
+alter table public.species add column if not exists temp_min_c int;
+alter table public.species add column if not exists temp_max_c int;
+alter table public.species add column if not exists spacing_m numeric;
+alter table public.species add column if not exists canopy_m numeric;
+alter table public.species add column if not exists dataset_match_score numeric;
+alter table public.species add column if not exists dataset_survival_pct numeric;
 
 -- ------------------------------------------------------------
 -- plans: one plantation plan, with its recommendation saved
@@ -257,40 +271,36 @@ values ('tree-photos', 'tree-photos', true)
 on conflict (id) do nothing;
 
 -- ------------------------------------------------------------
--- Seed data: species (matches the app's 10-species library)
--- ------------------------------------------------------------
+-- Seed data: species (matches the app's 12-species Pune dataset library)
 insert into public.species
-  (name, scientific_name, water_need, drought_tolerance, best_soils, height, growth_rate, best_use, note)
+  (name, scientific_name, water_need, drought_tolerance, best_soils, height, growth_rate, best_use, note,
+   ph_min, ph_max, rain_min_mm, rain_max_mm, temp_min_c, temp_max_c, spacing_m, canopy_m, dataset_match_score, dataset_survival_pct)
 values
-  ('Neem', 'Azadirachta indica', 2, 5, '{black,red,rocky,sandy}', '15–20 m', 'Fast', 'Shade, air quality, medicinal', 'Extremely hardy; the safest pick for dry, rocky or low-care sites.'),
-  ('Karanj', 'Pongamia pinnata', 2, 4, '{black,red,alluvial,clay}', '10–15 m', 'Fast', 'Shade, riverbanks, avenue', 'Tolerates waterlogging and poor soil; excellent all-rounder.'),
-  ('Bahava (Amaltas)', 'Cassia fistula', 3, 3, '{red,alluvial,black}', '8–12 m', 'Medium', 'Ornamental, campuses, bees', 'Golden summer flowers; needs decent drainage and early water.'),
-  ('Jamun', 'Syzygium cumini', 4, 2, '{alluvial,black,clay}', '12–18 m', 'Medium', 'Fruit, birds, shade', 'Loves moisture; superb near ponds and riverbanks, poor in drought.'),
-  ('Banyan', 'Ficus benghalensis', 3, 3, '{alluvial,red,black}', '20–30 m', 'Slow', 'Landmark shade, biodiversity', 'Needs 15 m+ space. Never near buildings, wires or small plots.'),
-  ('Peepal', 'Ficus religiosa', 3, 4, '{red,rocky,alluvial}', '15–25 m', 'Fast', 'Biodiversity, oxygen, shade', 'Bird magnet; keep away from walls — roots are powerful.'),
-  ('Mango', 'Mangifera indica', 3, 3, '{red,alluvial,black}', '10–15 m', 'Medium', 'Fruit, shade, community', 'Community favourite — people protect what feeds them.'),
-  ('Rain Tree', 'Samanea saman', 4, 2, '{alluvial,black,clay}', '15–20 m', 'Very fast', 'Instant shade, large grounds', 'Huge umbrella canopy; needs space and reliable water.'),
-  ('Gulmohar', 'Delonix regia', 3, 3, '{red,sandy,alluvial}', '10–12 m', 'Fast', 'Ornamental avenues', 'Spectacular red bloom; shallow roots — avoid near paving.'),
-  ('Tamarind', 'Tamarindus indica', 2, 5, '{black,red,rocky,sandy}', '15–20 m', 'Slow', 'Fruit, shade, drought zones', 'Nearly indestructible once established; ideal for dry districts.')
+  ('Neem', 'Azadirachta indica', 3, 5, '{black,lateritic,sandyloam}', 'up to 35 m', 'Fast', 'Shade, air quality, medicinal', 'Dataset match 81.6/100 across Pune sites; hardy, the safest pick for dry or low-care talukas.', 5.0, 8.5, 500, 1500, 18, 42, 8, 10, 81.6, 80.1),
+  ('Karanj', 'Pongamia pinnata', 2, 4, '{black,lateritic,loamy,clayey}', 'up to 20 m', 'Fast', 'Shade, riverbanks, avenue', 'Joint-top synthetic survivor in the dataset (87.4%); tolerates waterlogging and poor soil.', 5.5, 8.5, 500, 1800, 18, 42, 7, 8, 82.2, 87.4),
+  ('Bahava (Amaltas)', 'Cassia fistula', 2, 3, '{lateritic,loamy,black}', 'up to 15 m', 'Medium', 'Ornamental, campuses, bees', 'Golden summer flowers; dataset match 81.7/100, synthetic survival 87.1%.', 5.0, 8.5, 500, 1500, 18, 42, 6, 7, 81.7, 87.1),
+  ('Jamun', 'Syzygium cumini', 4, 2, '{loamy,black,clayey}', 'up to 30 m', 'Medium', 'Fruit, birds, shade', 'Loves moisture — needs 700 mm+ rain; the weakest of the moisture-lovers in the dataset at 76.4/100.', 5.0, 8.0, 700, 2200, 18, 40, 8, 10, 76.4, 77.1),
+  ('Banyan', 'Ficus benghalensis', 3, 3, '{loamy,lateritic,black}', 'up to 30 m', 'Slow', 'Landmark shade, biodiversity', 'Needs 15 m spacing. Never near buildings, wires or small plots.', 5.0, 8.0, 700, 2500, 18, 40, 15, 15, 77.5, 77.8),
+  ('Peepal', 'Ficus religiosa', 3, 4, '{lateritic,loamy}', 'up to 25 m', 'Fast', 'Biodiversity, oxygen, shade', 'Bird magnet; keep away from walls — roots are powerful.', 5.0, 8.0, 600, 2000, 18, 40, 10, 12, 78.7, 78.4),
+  ('Amla', 'Phyllanthus emblica', 2, 4, '{lateritic,black,loamy}', 'up to 15 m', 'Medium', 'Fruit, community orchards', 'Dataset match 81.6/100, synthetic survival 87.2%; a community favourite — people protect what feeds them.', 5.0, 8.5, 500, 1500, 18, 42, 6, 7, 81.6, 87.2),
+  ('Arjun', 'Terminalia arjuna', 5, 3, '{loamy,black,clayey}', 'up to 25 m', 'Medium', 'Riverbanks, shade, avenue', 'Highest water need in the dataset; needs 800 mm+ rain and moist soil — lowest dataset match at 73.8/100.', 5.0, 8.0, 800, 2500, 18, 40, 8, 10, 73.8, 75.2),
+  ('Mahua', 'Madhuca longifolia', 2, 4, '{lateritic,black,sandyloam}', 'up to 25 m', 'Slow', 'Fruit, shade, community', 'Dataset match 81.2/100, synthetic survival 87.0%; low-to-moderate water need.', 5.0, 8.5, 600, 1800, 18, 42, 10, 10, 81.2, 87.0),
+  ('Shirish', 'Albizia lebbeck', 3, 4, '{lateritic,black,loamy}', 'up to 25 m', 'Fast', 'Avenue, shade, nitrogen fixer', 'Highest dataset match in Pune (82.3/100); fast-growing avenue and shade species.', 5.0, 8.5, 500, 1800, 18, 42, 8, 10, 82.3, 80.3),
+  ('Kachnar', 'Bauhinia variegata', 3, 3, '{lateritic,loamy,sandyloam}', 'up to 12 m', 'Medium', 'Ornamental, campuses, small plots', 'Compact 5 m spacing — highest capacity per site in the dataset (median 74 trees).', 5.0, 8.0, 600, 1800, 18, 40, 5, 6, 79.3, 78.7),
+  ('Dudhi', 'Wrightia tinctoria', 2, 4, '{lateritic,black,sandyloam}', 'up to 12 m', 'Slow', 'Small plots, campuses, shade', 'Compact 5 m spacing, dataset match 81.8/100; low-to-moderate water need.', 5.0, 8.5, 500, 1500, 18, 42, 5, 6, 81.8, 87.0)
 on conflict (name) do nothing;
 
 -- ------------------------------------------------------------
--- Seed data: drives, 13 Dec 2026 – 31 Jan 2027
--- ------------------------------------------------------------
+-- Seed data: drives, Pune district only, 13 Dec 2026 – 24 Jan 2027
 insert into public.drives
   (title, organiser, type, city, district, drive_date, start_time, venue, trees_target, joined_count)
 values
   ('Baner Hills Restoration Drive', 'Green Pune Foundation', 'NGO', 'Pune', 'Pune', '2026-12-13', '7:00 AM', 'Baner Hill Trailhead, Pune', 300, 84),
   ('PCCOE Campus Green Cover Drive', 'PCCOE Green Club', 'College', 'Pune', 'Pune', '2026-12-19', '8:00 AM', 'PCCOE Campus, Nigdi, Pune', 150, 62),
   ('Mula Riverbank Plantation', 'Pune Municipal Corporation', 'Municipal', 'Pune', 'Pune', '2026-12-20', '7:30 AM', 'Mula Riverbank, Kharadi', 500, 141),
-  ('Godavari Ghat Greening', 'Nashik Eco Trust', 'NGO', 'Nashik', 'Nashik', '2026-12-27', '7:00 AM', 'Ramkund Ghat, Nashik', 250, 73),
-  ('Futala Lake Shade Drive', 'Nagpur Green Brigade', 'NGO', 'Nagpur', 'Nagpur', '2027-01-03', '7:00 AM', 'Futala Lake Promenade, Nagpur', 200, 58),
-  ('Rankala Lakeside Plantation', 'Kolhapur Municipal Council', 'Municipal', 'Kolhapur', 'Kolhapur', '2027-01-09', '8:00 AM', 'Rankala Lake Garden, Kolhapur', 350, 97),
-  ('Yeoor Hills Buffer Planting', 'Thane Creek Guardians', 'NGO', 'Thane', 'Thane', '2027-01-10', '6:30 AM', 'Yeoor Hills Gate, Thane', 400, 112),
   ('CSR Avenue Plantation — Hinjewadi', 'TechPark CSR Collective', 'CSR', 'Pune', 'Pune', '2027-01-17', '7:00 AM', 'Phase 2 Avenue, Hinjewadi', 600, 188),
-  ('College Biodiversity Park Drive', 'Fergusson College NSS', 'College', 'Pune', 'Pune', '2027-01-24', '8:00 AM', 'Fergusson Hill, Pune', 180, 49),
-  ('Ambazari Biodiversity Drive', 'Nagpur CSR Forum', 'CSR', 'Nagpur', 'Nagpur', '2027-01-31', '7:30 AM', 'Ambazari Garden, Nagpur', 450, 126);
+  ('College Biodiversity Park Drive', 'Fergusson College NSS', 'College', 'Pune', 'Pune', '2027-01-24', '8:00 AM', 'Fergusson Hill, Pune', 180, 49);
 
 -- Done. Verify with:
---   select count(*) from public.species;  -- 10
---   select count(*) from public.drives;   -- 10
+--   select count(*) from public.species;  -- 12
+--   select count(*) from public.drives;   -- 5
