@@ -217,11 +217,15 @@
       try {
         var jr = await sb.from("drive_joins").select("drive_id,user_id,volunteers_count");
         if (!jr.error && jr.data) {
-          var totals = {};
+          var totals = {}, userTotals = {};
           jr.data.forEach(function (j) {
             totals[j.drive_id] = (totals[j.drive_id] || 0) + (j.volunteers_count || 1);
-            if (userId && j.user_id === userId) window.joinedDrives[j.drive_id] = j.volunteers_count || 1;
+            if (userId && j.user_id === userId) userTotals[j.drive_id] = (userTotals[j.drive_id] || 0) + (j.volunteers_count || 1);
           });
+          // The database is the source of truth for your own joins, so
+          // "You're in" shows your total across registrations, not
+          // just the latest one.
+          Object.keys(userTotals).forEach(function (id) { window.joinedDrives[id] = userTotals[id]; });
           mapped.forEach(function (d) {
             if (totals[d.id] != null) { d.joined = totals[d.id]; d.joinedDb = true; }
           });
