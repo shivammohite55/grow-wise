@@ -204,3 +204,4 @@ details.guide{border-radius:16px}
 
 @media(max-width:700px){.resp-stack{grid-template-columns:1fr!important}}
 @media(max-width:860px){#planGrid{grid-template-columns:1fr!important}}
+#authBtn{max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}

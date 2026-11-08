@@ -210,6 +210,24 @@
           img: byTitle[d.title] || ""
         };
       });
+      // Real joined counts: sum drive_joins per drive (the drives row
+      // count is never updated when someone joins), and restore the
+      // current user's own joins so "You're in" survives a reload
+      // or a sign-in on another device.
+      try {
+        var jr = await sb.from("drive_joins").select("drive_id,user_id,volunteers_count");
+        if (!jr.error && jr.data) {
+          var totals = {};
+          jr.data.forEach(function (j) {
+            totals[j.drive_id] = (totals[j.drive_id] || 0) + (j.volunteers_count || 1);
+            if (userId && j.user_id === userId) window.joinedDrives[j.drive_id] = j.volunteers_count || 1;
+          });
+          mapped.forEach(function (d) {
+            if (totals[d.id] != null) { d.joined = totals[d.id]; d.joinedDb = true; }
+          });
+          saveLocal();
+        }
+      } catch (e) { /* counts stay as stored */ }
       window.DRIVES.length = 0;
       mapped.forEach(function (d) { window.DRIVES.push(d); });
       if (typeof renderDrives === "function") renderDrives("all");
@@ -332,7 +350,7 @@
         var target = window.joinTarget;
         origJoin();
         saveLocal();
-        if (sb && target) sbInsertJoin(target.id, name, phone, count);
+        if (sb && target) sbInsertJoin(target.id, name, phone, count).then(function () { sbLoadDrives(); loadMyDrives(); });
       };
       wrappedJoin._gwWrapped = true;
       window.submitJoin = wrappedJoin;
@@ -369,7 +387,7 @@
     var btn = document.getElementById("authBtn");
     var prof = window.GWProfile;
     var loggedIn = !!(currentUser && !currentUser.is_anonymous);
-    if (btn) btn.textContent = loggedIn ? ((prof && prof.full_name ? prof.full_name.split(" ")[0] : "Account")) : "Sign in";
+    if (btn) btn.textContent = loggedIn ? ((prof && prof.full_name) || "Account") : "Sign in";
     var out = document.getElementById("authLoggedOut");
     var inn = document.getElementById("authLoggedIn");
     if (out) out.style.display = loggedIn ? "none" : "block";
@@ -472,7 +490,7 @@
     if (res.error) return fail("Could not publish the drive: " + res.error.message);
     if (typeof toast === "function") toast("Drive published — it now shows in the list.");
     var f = document.getElementById("driveForm"); if (f) f.style.display = "none";
-    sbLoadDrives(); loadMyDrives();
+    await sbLoadDrives(); loadMyDrives();
   }
   async function loadMyDrives() {
     var box = document.getElementById("myDrivesList");
