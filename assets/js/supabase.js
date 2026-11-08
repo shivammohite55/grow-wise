@@ -188,7 +188,8 @@
       // database migration runs. If nothing survives the filter, keep
       // the hardcoded Pune drives as fallback.
       rows = rows.filter(function (d) {
-        return ((d.district || d.city || "").toLowerCase() === "pune");
+        return ((d.district || "").toLowerCase() === "pune" ||
+                (d.city || "").toLowerCase() === "pune");
       });
       if (!rows.length) return;
       // Keep the original photos (matched by title); use DB for everything else.
@@ -338,6 +339,168 @@
     }
   }
 
+
+  /* ---------- auth: email + password (roles in profiles) ---------- */
+  var currentUser = null;
+  function gwVal(id) { var el = document.getElementById(id); return el ? el.value.trim() : ""; }
+  function isGuest() { return !!(currentUser && currentUser.is_anonymous); }
+  function roleLabel(r) {
+    return { individual: "Individual", ngo: "NGO", college: "College",
+             municipal: "Municipal body", csr: "CSR team" }[r] || r || "Member";
+  }
+  function friendlyAuthError(e) {
+    var m = (e && e.message) || "Something went wrong. Please try again.";
+    if (/invalid login credentials/i.test(m)) return "Wrong email or password — check them and try again.";
+    if (/email not confirmed/i.test(m)) return "Please confirm your email first — check your inbox for the link.";
+    if (/signups are disabled|logins are disabled|email.*disabled/i.test(m))
+      return "Email sign-in is switched off in Supabase — enable it in Dashboard > Authentication > Providers > Email.";
+    return m;
+  }
+  async function loadProfile() {
+    window.GWProfile = null;
+    if (!sb || !userId) return null;
+    try {
+      var res = await sb.from("profiles").select("*").eq("id", userId).maybeSingle();
+      if (!res.error && res.data) window.GWProfile = res.data;
+    } catch (e) { /* no profile yet — guest or brand-new account */ }
+    return window.GWProfile;
+  }
+  function updateAuthUI() {
+    var btn = document.getElementById("authBtn");
+    var prof = window.GWProfile;
+    var loggedIn = !!(currentUser && !currentUser.is_anonymous);
+    if (btn) btn.textContent = loggedIn ? ((prof && prof.full_name ? prof.full_name.split(" ")[0] : "Account")) : "Sign in";
+    var out = document.getElementById("authLoggedOut");
+    var inn = document.getElementById("authLoggedIn");
+    if (out) out.style.display = loggedIn ? "none" : "block";
+    if (inn) inn.style.display = loggedIn ? "block" : "none";
+    if (loggedIn && prof) {
+      var n = document.getElementById("accName"); if (n) n.textContent = prof.full_name || currentUser.email;
+      var e = document.getElementById("accEmail"); if (e) e.textContent = currentUser.email || "";
+      var r = document.getElementById("accRole"); if (r) r.textContent = roleLabel(prof.role);
+    }
+    if (typeof refreshOrganiserUI === "function") refreshOrganiserUI();
+  }
+  // The signed-in account changed (new id) — drop the old guest backup
+  // and reload onto a clean slate for the new account.
+  function switchUser() {
+    try { localStorage.removeItem(LS_KEY); } catch (e) { /* ignore */ }
+    location.reload();
+  }
+  async function signUp(role) {
+    if (typeof authErr === "function") authErr("up", null);
+    if (!sb) { if (typeof authErr === "function") authErr("up", "Sign-in is not available right now. Check your connection and try again."); return; }
+    var name = gwVal("sName"), email = gwVal("sEmail"), pass = gwVal("sPass");
+    var org = gwVal("sOrg"), taluka = gwVal("sTaluka");
+    if (name.length < 2) return authErr("up", "Please add your name.");
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return authErr("up", "Please add a valid email address.");
+    if (pass.length < 6) return authErr("up", "Password needs at least 6 characters.");
+    if (role !== "individual" && org.length < 2) return authErr("up", "Please add your organisation name.");
+    var wasGuest = isGuest();
+    try {
+      var user, session;
+      if (wasGuest) {
+        // Guest -> real account: the user id stays the same, so every
+        // tree, plan and drive join saved as a guest stays yours.
+        var up = await sb.auth.updateUser({ email: email, password: pass });
+        if (up.error) throw up.error;
+        user = up.data.user; session = true;
+      } else {
+        var su = await sb.auth.signUp({ email: email, password: pass });
+        if (su.error) throw su.error;
+        user = su.data.user; session = !!su.data.session;
+        if (!session) {
+          if (typeof authErr === "function") authErr("up", "Account created — check " + email + " for a confirmation link, then sign in.");
+          return;
+        }
+      }
+      if (!user) throw new Error("no user");
+      var prof = { id: user.id, full_name: role === "individual" ? name : org, role: role, district: taluka || "Pune City" };
+      var pr = await sb.from("profiles").upsert(prof);
+      if (pr.error) throw pr.error;
+      currentUser = user; userId = user.id; window.GWProfile = prof;
+      if (!wasGuest) { switchUser(); return; } // fresh account: new id, reload clean
+      updateAuthUI();
+      if (typeof toast === "function") toast("Welcome, " + name.split(" ")[0] + " — your account is ready.");
+      if (typeof go === "function") go("dashboard");
+    } catch (e) {
+      if (typeof authErr === "function") authErr("up", friendlyAuthError(e));
+    }
+  }
+  async function signIn() {
+    if (typeof authErr === "function") authErr("in", null);
+    if (!sb) { if (typeof authErr === "function") authErr("in", "Sign-in is not available right now. Check your connection and try again."); return; }
+    var email = gwVal("aEmail"), pass = gwVal("aPass");
+    if (!email || !pass) return authErr("in", "Add your email and password.");
+    var r = await sb.auth.signInWithPassword({ email: email, password: pass });
+    if (r.error) return authErr("in", friendlyAuthError(r.error));
+    switchUser();
+  }
+  async function signOut() {
+    try { if (sb) await sb.auth.signOut(); } catch (e) { /* ignore */ }
+    switchUser();
+  }
+  async function resetPassword() {
+    var email = gwVal("aEmail") || (currentUser && currentUser.email) || "";
+    if (!email) { if (typeof authErr === "function") authErr("in", "Type your email above first, then tap “Forgot your password?”."); return; }
+    if (!sb) return;
+    var r = await sb.auth.resetPasswordForEmail(email, { redirectTo: location.origin + location.pathname + "#auth" });
+    if (r.error) return authErr("in", friendlyAuthError(r.error));
+    if (typeof toast === "function") toast("Reset link sent to " + email + " — check your inbox.");
+  }
+  async function createDrive() {
+    var errEl = document.getElementById("driveFormErr");
+    function fail(m) { if (errEl) { errEl.textContent = m; errEl.style.display = "block"; } }
+    if (errEl) errEl.style.display = "none";
+    if (!sb || !currentUser || currentUser.is_anonymous) return fail("Sign in with your organisation account to organise a drive.");
+    var prof = window.GWProfile;
+    if (!prof || ["ngo", "college", "municipal", "csr"].indexOf(prof.role) < 0)
+      return fail("Only NGO, college, municipal and CSR accounts can organise drives.");
+    var title = gwVal("dTitle"), taluka = gwVal("dTaluka"), venue = gwVal("dVenue");
+    var date = gwVal("dDate"), time = gwVal("dTime") || "7:00 AM";
+    var trees = Math.max(1, parseInt(gwVal("dTrees"), 10) || 0);
+    if (title.length < 3) return fail("Please add a drive title.");
+    if (!venue || venue.length < 3) return fail("Please add the venue / meeting point.");
+    if (!date) return fail("Please pick a date.");
+    var typeMap = { ngo: "NGO", college: "College", municipal: "Municipal", csr: "CSR" };
+    var res = await sb.from("drives").insert({
+      title: title, organiser: prof.full_name || "Team Grow Wise",
+      type: typeMap[prof.role] || "NGO", city: taluka, district: "Pune",
+      drive_date: date, start_time: time, venue: venue,
+      trees_target: trees, joined_count: 0, organiser_id: currentUser.id
+    });
+    if (res.error) return fail("Could not publish the drive: " + res.error.message);
+    if (typeof toast === "function") toast("Drive published — it now shows in the list.");
+    var f = document.getElementById("driveForm"); if (f) f.style.display = "none";
+    sbLoadDrives(); loadMyDrives();
+  }
+  async function loadMyDrives() {
+    var box = document.getElementById("myDrivesList");
+    if (!box) return;
+    var prof = window.GWProfile;
+    if (!sb || !currentUser || currentUser.is_anonymous || !prof ||
+        ["ngo", "college", "municipal", "csr"].indexOf(prof.role) < 0) { box.innerHTML = ""; return; }
+    var res = await sb.from("drives").select("*").eq("organiser_id", currentUser.id).order("drive_date", { ascending: true });
+    if (res.error || !res.data || !res.data.length) {
+      box.innerHTML = '<div class="card"><p>No drives organised yet — publish your first one above.</p></div>';
+      return;
+    }
+    var ids = res.data.map(function (d) { return d.id; });
+    var joins = await sb.from("drive_joins").select("drive_id,name,volunteers_count").in("drive_id", ids);
+    var byDrive = {};
+    (joins.data || []).forEach(function (j) { (byDrive[j.drive_id] = byDrive[j.drive_id] || []).push(j); });
+    box.innerHTML = res.data.map(function (d) {
+      var js = byDrive[d.id] || [];
+      var total = js.reduce(function (a, j) { return a + (j.volunteers_count || 1); }, 0);
+      var names = js.map(function (j) { return esc(j.name) + " (" + (j.volunteers_count || 1) + ")"; }).join(", ") || "No registrations yet";
+      var when = (typeof fmtDriveDate === "function") ? fmtDriveDate(d.drive_date) : d.drive_date;
+      return '<div class="card"><h3>' + esc(d.title) + '</h3><p>🗓️ ' + esc(when) + ' · 📍 ' + esc(d.venue) + '<br/>🌱 ' + (d.trees_target || 0) + ' trees planned · 👥 ' + total + ' volunteers joined</p><p class="mini">' + names + '</p></div>';
+    }).join("");
+  }
+  window.GWAuth = { signUp: signUp, signIn: signIn, signOut: signOut,
+    resetPassword: resetPassword, createDrive: createDrive,
+    loadMyDrives: loadMyDrives, isGuest: isGuest, roleLabel: roleLabel };
+
   /* ---------- init ---------- */
   function init() {
     var restored = restoreLocal();
@@ -359,8 +522,8 @@
       return;
     }
 
-    // Anonymous sign-in (no password needed for the demo).
-    // If anonymous sign-in is off in Supabase Auth, we stay in local mode.
+    // Session first: a signed-in account keeps its id and data;
+    // otherwise fall back to an anonymous guest session.
     var signIn = sb.auth.getSession().then(function (s) {
       if (s && s.data && s.data.session) return s.data.session.user;
       return sb.auth.signInAnonymously().then(function (r) {
@@ -371,16 +534,21 @@
 
     signIn.then(function (user) {
       if (!user) throw new Error("no user");
+      currentUser = user;
       userId = user.id;
       mode = "supabase";
       setStatus("Connected — your trees, plans and drive joins are saved and survive a refresh.");
-      sbLoadDrives();
-      sbLoadTrees();
+      loadProfile().then(function () {
+        sbLoadDrives();
+        sbLoadTrees();
+        updateAuthUI();
+      });
     }).catch(function () {
       mode = "local";
       setStatus("Your trees save in this browser for now.");
       // Drives/species are still readable without sign-in.
       sbLoadDrives();
+      updateAuthUI();
     });
   }
 
