@@ -9,10 +9,9 @@
 --      12 Pune-dataset species (e.g. Mango, Rain Tree,
 --      Gulmohar, Tamarind left over from earlier tests).
 --   2. Deletes duplicate tracked trees, keeping only the
---      NEWEST row for each user + species + location +
---      planted date (so the Pune City 20 Dec 2026 plan that
---      was saved twice keeps one entry: Karanj x4,
---      Bahava (Amaltas) x4, Amla x2).
+--      NEWEST row for each species + location + planted date
+--      (across all users, since test saves came from different
+--      browsers with different anonymous users).
 --   3. Deletes duplicate plans the same way, keeping the newest.
 --   4. Shows what is left, so you can check the result.
 -- It does NOT delete the newest entries, and it does NOT
@@ -26,14 +25,16 @@ where species not in (
   'Amla', 'Arjun', 'Mahua', 'Shirish', 'Kachnar', 'Dudhi'
 );
 
--- 2. Duplicate trees: keep only the newest per user + species + location + planted date
+-- 2. Duplicate trees: keep only the NEWEST row for each species +
+--    location + planted date, across ALL users. (Test saves were made
+--    from different browsers, so the same plan exists under different
+--    anonymous users — matching on user_id alone misses those.)
 delete from public.trees t
 using public.trees d
-where t.user_id is not distinct from d.user_id
-  and t.species = d.species
+where t.species = d.species
   and t.location is not distinct from d.location
   and t.planted_on is not distinct from d.planted_on
-  and t.created_at < d.created_at;
+  and (t.created_at, t.id) < (d.created_at, d.id);
 
 -- 3. Duplicate plans: keep only the newest per user + taluka + planting date + tree count
 delete from public.plans p
